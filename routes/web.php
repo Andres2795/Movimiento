@@ -32,6 +32,10 @@ Route::livewire('/pagina-publica', 'public-page-settings')
     ->middleware(['auth', 'admin'])
     ->name('public-page.settings');
 
+Route::livewire('/galeria', 'gallery-manager')
+    ->middleware(['auth', 'admin'])
+    ->name('gallery.manager');
+
 Route::livewire('/solicitudes', 'join-requests')
     ->middleware(['auth', 'admin'])
     ->name('join-requests');

@@ -244,6 +244,7 @@ new class extends Component
         <nav class="main-nav" aria-label="Navegación principal">
             <a href="{{ route('documents.upload') }}" @class(['is-active' => request()->routeIs('documents.upload')])>Padrón</a>
             <a href="{{ route('organic-structure') }}" @class(['is-active' => request()->routeIs('organic-structure')])>Documento</a>
+            <a href="{{ route('gallery.manager') }}" @class(['is-active' => request()->routeIs('gallery.manager')])>Galería</a>
             <a href="{{ route('public-page.settings') }}" @class(['is-active' => request()->routeIs('public-page.settings')])>Banner</a>
             <a href="{{ route('join-requests') }}" @class(['is-active' => request()->routeIs('join-requests')])>Solicitudes</a>
         </nav>

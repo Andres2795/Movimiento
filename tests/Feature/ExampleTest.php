@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\OrganicStructureDocument;
+use App\Models\GalleryEvent;
+use App\Models\GalleryPhoto;
 use App\Models\MovementJoinRequest;
 use App\Models\PadronRecord;
 use App\Models\PublicPageSetting;
@@ -27,6 +29,7 @@ class ExampleTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Movimiento Caminemos Unidos');
+        $response->assertSee('Galería');
         $response->assertSee('Acceder');
         $response->assertSee('Enviar solicitud');
     }
@@ -90,6 +93,37 @@ class ExampleTest extends TestCase
         $response->assertDontSee('Padrón electoral');
         $response->assertSee('Abrir PDF');
         $response->assertSee('3.0 MB');
+    }
+
+    public function test_public_home_page_lists_gallery_events(): void
+    {
+        Storage::fake('public');
+
+        $event = GalleryEvent::create([
+            'title' => 'Recorrido territorial',
+            'description' => 'Actividad ciudadana en el centro.',
+            'event_date' => '2026-06-01',
+        ]);
+
+        $photo = GalleryPhoto::create([
+            'gallery_event_id' => $event->id,
+            'original_name' => 'recorrido-1.jpg',
+            'stored_name' => 'recorrido-1.jpg',
+            'path' => 'gallery/events/'.$event->id.'/recorrido-1.jpg',
+            'disk' => 'public',
+            'mime_type' => 'image/jpeg',
+            'size' => 2048,
+            'sort_order' => 1,
+        ]);
+
+        Storage::disk('public')->put($photo->path, 'image-content');
+
+        $response = $this->get(route('client.home'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Recorrido territorial');
+        $response->assertSee('Actividad ciudadana en el centro.');
+        $response->assertSee('storage/gallery/events/'.$event->id.'/recorrido-1.jpg');
     }
 
     public function test_public_join_form_stores_movement_request(): void
@@ -314,6 +348,20 @@ class ExampleTest extends TestCase
         $response->assertSee('Guardar imagen');
     }
 
+    public function test_administrator_can_access_gallery_manager(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'administrador',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get('/galeria');
+
+        $response->assertStatus(200);
+        $response->assertSee('Galería de fotos');
+        $response->assertSee('Subir fotografías');
+    }
+
     public function test_administrator_can_access_join_requests_page(): void
     {
         $admin = User::factory()->create([
@@ -361,6 +409,37 @@ class ExampleTest extends TestCase
         $this->assertNotNull($setting);
         $this->assertSame('hero.jpg', $setting->hero_image_original_name);
         Storage::disk('public')->assertExists($setting->hero_image_path);
+    }
+
+    public function test_administrator_can_store_gallery_event_with_photos(): void
+    {
+        Storage::fake('public');
+
+        $photoA = UploadedFile::fake()->image('evento-1.jpg', 1200, 900)->size(1024);
+        $photoB = UploadedFile::fake()->image('evento-2.png', 1000, 800)->size(512);
+
+        Livewire::test('gallery-manager')
+            ->set('eventTitle', 'Recorrido territorial')
+            ->set('eventDate', '2026-06-01')
+            ->set('eventDescription', 'Actividad ciudadana en el centro.')
+            ->upload('photos', [$photoA, $photoB], true)
+            ->call('saveEvent')
+            ->assertSee('se guardó correctamente');
+
+        $this->assertSame(1, GalleryEvent::count());
+        $this->assertSame(2, GalleryPhoto::count());
+        $this->assertDatabaseHas('gallery_events', [
+            'title' => 'Recorrido territorial',
+        ]);
+
+        $event = GalleryEvent::firstOrFail();
+        $this->assertDatabaseHas('gallery_photos', [
+            'gallery_event_id' => $event->id,
+            'original_name' => 'evento-1.jpg',
+        ]);
+
+        $photo = GalleryPhoto::firstOrFail();
+        Storage::disk('public')->assertExists($photo->path);
     }
 
     public function test_organic_structure_upload_panel_is_opened_on_demand(): void

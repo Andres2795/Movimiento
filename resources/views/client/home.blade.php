@@ -26,11 +26,14 @@
                 <div class="nav-links">
                     <a href="#inicio">Inicio</a>
                     <a href="#propuestas">Nuestro enfoque</a>
+                    <a href="#galeria">Galería</a>
                     <a href="#transparencia">Transparencia</a>
                     <a href="#contacto">Contactos</a>
                 </div>
 
-                @guest
+                @if (auth()->check() && auth()->user()?->role === 'administrador' && auth()->user()?->is_active)
+                    <a class="admin-link" href="{{ route('documents.upload') }}">Administrador</a>
+                @else
                     <a class="admin-link" href="{{ route('login') }}">
                         <svg class="admin-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M7 11V8a5 5 0 0 1 10 0v3"></path>
@@ -39,9 +42,7 @@
                         </svg>
                         Acceder
                     </a>
-                @else
-                    <a class="admin-link" href="{{ route('documents.upload') }}">Administrador</a>
-                @endguest
+                @endif
             </nav>
         </header>
 
@@ -97,6 +98,69 @@
                         <p>Fortalecemos equipos barriales, comunitarios y ciudadanos para sostener una estructura cercana.</p>
                     </article>
                 </div>
+            </section>
+
+            <section id="galeria" class="gallery-section" aria-labelledby="gallery-title">
+                <div class="section-heading">
+                    <p class="section-kicker">Galería</p>
+                    <h2 id="gallery-title">Eventos y fotografías del movimiento</h2>
+                    <p>Fotos organizadas por evento para revisar recorridos, reuniones y actividades públicas del movimiento.</p>
+                </div>
+
+                @if ($galleryEvents->isEmpty())
+                    <div class="empty-public-state">
+                        Todavía no hay fotografías publicadas en la galería.
+                    </div>
+                @else
+                    <div class="gallery-stack">
+                        @foreach ($galleryEvents as $event)
+                            @php
+                                $coverPhoto = $event->photos->first();
+                                $secondaryPhotos = $event->photos->skip(1);
+                            @endphp
+
+                            <article class="gallery-event-card">
+                                <div class="gallery-event-header">
+                                    <div>
+                                        <span class="document-badge">Evento</span>
+                                        <h3>{{ $event->title }}</h3>
+                                        <p>
+                                            {{ ($event->event_date ?? $event->created_at)->format('d/m/Y') }}
+                                            · {{ $event->photos->count() }} foto{{ $event->photos->count() === 1 ? '' : 's' }}
+                                        </p>
+                                    </div>
+                                    <div class="gallery-count-pill">{{ $event->photos->count() }}</div>
+                                </div>
+
+                                <div class="gallery-event-body">
+                                    <a class="gallery-cover" href="{{ asset('storage/'.$coverPhoto->path) }}" target="_blank" rel="noopener">
+                                        <img src="{{ asset('storage/'.$coverPhoto->path) }}" alt="{{ $coverPhoto->original_name }}">
+                                    </a>
+
+                                    <div class="gallery-side-panel">
+                                        @if ($event->description)
+                                            <p class="gallery-event-description">{{ $event->description }}</p>
+                                        @endif
+
+                                        @if ($secondaryPhotos->isNotEmpty())
+                                            <div class="gallery-thumb-grid">
+                                                @foreach ($secondaryPhotos->take(4) as $photo)
+                                                    <a class="gallery-thumb" href="{{ asset('storage/'.$photo->path) }}" target="_blank" rel="noopener">
+                                                        <img src="{{ asset('storage/'.$photo->path) }}" alt="{{ $photo->original_name }}">
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <div class="gallery-empty-note">
+                                                Este evento contiene una fotografía principal publicada por el equipo del movimiento.
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
             </section>
 
             <section id="transparencia" class="transparency-section" aria-labelledby="transparency-title">

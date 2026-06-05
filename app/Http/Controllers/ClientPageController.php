@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GalleryEvent;
 use App\Models\OrganicStructureDocument;
 use App\Models\PublicPageSetting;
 use Illuminate\Contracts\View\View;
@@ -24,6 +25,13 @@ class ClientPageController extends Controller
                 'button' => 'Abrir PDF',
             ]);
 
+        $galleryEvents = GalleryEvent::query()
+            ->with(['photos' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')])
+            ->whereHas('photos')
+            ->orderByDesc('event_date')
+            ->orderByDesc('id')
+            ->get();
+
         return view('client.home', [
             'heroImageUrl' => $publicPageSetting->hero_image_path
                 ? asset('storage/'.$publicPageSetting->hero_image_path)
@@ -31,6 +39,7 @@ class ClientPageController extends Controller
             'documents' => $organicDocuments
                 ->sortByDesc('date')
                 ->values(),
+            'galleryEvents' => $galleryEvents,
         ]);
     }
 }
