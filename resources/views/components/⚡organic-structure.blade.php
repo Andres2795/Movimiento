@@ -21,6 +21,10 @@ new class extends Component
 
     public bool $showUploadPanel = false;
 
+    public ?int $editingDocumentId = null;
+
+    public array $editingDocumentNames = [];
+
     protected function rules(): array
     {
         return [
@@ -141,6 +145,50 @@ new class extends Component
         $this->successMessage = 'PDF eliminado correctamente.';
     }
 
+    public function editDocumentName(int $documentId): void
+    {
+        $document = OrganicStructureDocument::find($documentId);
+
+        if (! $document) {
+            return;
+        }
+
+        $this->editingDocumentId = $documentId;
+        $this->editingDocumentNames[$documentId] = $document->title;
+        $this->resetErrorBag("editingDocumentNames.{$documentId}");
+    }
+
+    public function cancelDocumentNameEdit(): void
+    {
+        $this->editingDocumentId = null;
+        $this->resetErrorBag();
+    }
+
+    public function saveDocumentName(int $documentId): void
+    {
+        $document = OrganicStructureDocument::find($documentId);
+
+        if (! $document) {
+            return;
+        }
+
+        $name = trim((string) ($this->editingDocumentNames[$documentId] ?? $document->title));
+
+        if ($name === '') {
+            $this->addError("editingDocumentNames.{$documentId}", 'Ingresa un nombre público para el PDF.');
+            return;
+        }
+
+        if (mb_strlen($name) > 150) {
+            $this->addError("editingDocumentNames.{$documentId}", 'El nombre público no debe superar 150 caracteres.');
+            return;
+        }
+
+        $document->update(['title' => $name]);
+        $this->editingDocumentId = null;
+        $this->successMessage = 'Nombre del PDF actualizado correctamente.';
+    }
+
     public function clearDocumentSearch(): void
     {
         $this->documentSearch = '';
@@ -195,7 +243,9 @@ new class extends Component
 
         <nav class="main-nav" aria-label="Navegación principal">
             <a href="{{ route('documents.upload') }}" @class(['is-active' => request()->routeIs('documents.upload')])>Padrón</a>
-            <a href="{{ route('organic-structure') }}" @class(['is-active' => request()->routeIs('organic-structure')])>Estructura orgánica</a>
+            <a href="{{ route('organic-structure') }}" @class(['is-active' => request()->routeIs('organic-structure')])>Documento</a>
+            <a href="{{ route('public-page.settings') }}" @class(['is-active' => request()->routeIs('public-page.settings')])>Banner</a>
+            <a href="{{ route('join-requests') }}" @class(['is-active' => request()->routeIs('join-requests')])>Solicitudes</a>
         </nav>
 
         <span class="status-pill">
@@ -213,8 +263,8 @@ new class extends Component
         <section class="page-toolbar" aria-labelledby="organic-title">
             <div>
                 <p class="eyebrow">Organización interna</p>
-                <h1 id="organic-title" class="upload-title">Estructura orgánica</h1>
-                <p class="upload-subtitle">Visualiza los PDFs de la estructura orgánica del movimiento.</p>
+                <h1 id="organic-title" class="upload-title">Documento</h1>
+                <p class="upload-subtitle">Visualiza los PDFs institucionales del movimiento.</p>
             </div>
 
             <button class="primary-button toolbar-button" type="button" wire:click="openUploadPanel">
@@ -239,6 +289,17 @@ new class extends Component
                         </button>
                     </div>
                     <p class="upload-subtitle">Selecciona uno o varios PDFs para agregarlos a la biblioteca de estructura orgánica.</p>
+
+                    <label class="name-field" for="organic-public-name">
+                        <span>Nombre público del documento</span>
+                        <input
+                            id="organic-public-name"
+                            type="text"
+                            name="document_name"
+                            maxlength="150"
+                            placeholder="Ejemplo: Régimen orgánico oficial"
+                        >
+                    </label>
 
                 <label class="dropzone compact-dropzone" data-dropzone for="organic-documents">
                     <span>
@@ -351,21 +412,59 @@ new class extends Component
                                         <span class="file-size">{{ $this->formatBytes($document->size) }} · {{ $document->created_at->format('d/m/Y') }}</span>
                                     </span>
                                 </button>
-                                <button
-                                    type="button"
-                                    class="pdf-delete-button"
-                                    wire:click="deleteDocument({{ $document->id }})"
-                                    wire:confirm="¿Eliminar este PDF?"
-                                    aria-label="Eliminar {{ $document->original_name }}"
-                                >
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M3 6h18"></path>
-                                        <path d="M8 6V4h8v2"></path>
-                                        <path d="M10 11v6"></path>
-                                        <path d="M14 11v6"></path>
-                                        <path d="M6 6l1 14h10l1-14"></path>
-                                    </svg>
-                                </button>
+                                <div class="pdf-row-actions">
+                                    <button
+                                        type="button"
+                                        class="pdf-icon-button"
+                                        wire:click="editDocumentName({{ $document->id }})"
+                                        aria-label="Cambiar nombre de {{ $document->original_name }}"
+                                        title="Cambiar nombre"
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M12 20h9"></path>
+                                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                                        </svg>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="pdf-delete-button"
+                                        wire:click="deleteDocument({{ $document->id }})"
+                                        wire:confirm="¿Eliminar este PDF?"
+                                        aria-label="Eliminar {{ $document->original_name }}"
+                                        title="Eliminar PDF"
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M3 6h18"></path>
+                                            <path d="M8 6V4h8v2"></path>
+                                            <path d="M10 11v6"></path>
+                                            <path d="M14 11v6"></path>
+                                            <path d="M6 6l1 14h10l1-14"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                @if ($editingDocumentId === $document->id)
+                                    <div class="pdf-name-editor">
+                                        <label class="name-field compact-name-field">
+                                            <span>Nombre público</span>
+                                            <input
+                                                type="text"
+                                                wire:model.defer="editingDocumentNames.{{ $document->id }}"
+                                                maxlength="150"
+                                            >
+                                        </label>
+                                        <div class="pdf-name-actions">
+                                            <button class="secondary-button" type="button" wire:click="saveDocumentName({{ $document->id }})">
+                                                Guardar
+                                            </button>
+                                            <button class="secondary-button ghost-button" type="button" wire:click="cancelDocumentNameEdit">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                        @error("editingDocumentNames.{$document->id}")
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+                                @endif
                             </li>
                         @endforeach
                     </ul>

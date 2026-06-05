@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UploadedDocument extends Model
 {
     protected $fillable = [
         'original_name',
+        'public_name',
         'stored_name',
         'path',
         'disk',
@@ -15,4 +17,9 @@ class UploadedDocument extends Model
         'extension',
         'size',
     ];
+
+    public function padronRecords(): HasMany
+    {
+        return $this->hasMany(PadronRecord::class);
+    }
 }

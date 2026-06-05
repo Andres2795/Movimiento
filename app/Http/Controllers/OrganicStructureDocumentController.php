@@ -18,21 +18,29 @@ class OrganicStructureDocumentController extends Controller
         $validated = $request->validate([
             'documents' => ['required', 'array', 'min:1'],
             'documents.*' => ['file', 'mimes:pdf', 'max:20480'],
+            'document_name' => ['nullable', 'string', 'max:150'],
+            'document_names' => ['nullable', 'array'],
+            'document_names.*' => ['nullable', 'string', 'max:150'],
         ], [
             'documents.required' => 'Selecciona al menos un PDF de estructura orgánica.',
             'documents.*.uploaded' => 'El PDF no pudo subirse al servidor. Verifica que pese 20 MB o menos y vuelve a seleccionarlo.',
             'documents.*.mimes' => 'Solo se permiten documentos PDF.',
             'documents.*.max' => 'Cada PDF debe pesar 20 MB o menos.',
             'documents.*.file' => 'Uno de los elementos seleccionados no es un archivo válido.',
+            'document_name.max' => 'El nombre público no debe superar 150 caracteres.',
+            'document_names.*.max' => 'El nombre público no debe superar 150 caracteres.',
         ]);
 
         $lastDocumentId = null;
 
-        foreach ($validated['documents'] as $document) {
+        foreach ($validated['documents'] as $index => $document) {
             $path = $document->store('organic-structure', 'public');
+            $generalPublicName = trim((string) ($validated['document_name'] ?? ''));
+            $specificPublicName = trim((string) ($validated['document_names'][$index] ?? ''));
+            $publicName = $specificPublicName !== '' ? $specificPublicName : $generalPublicName;
 
             $record = OrganicStructureDocument::create([
-                'title' => pathinfo($document->getClientOriginalName(), PATHINFO_FILENAME),
+                'title' => $publicName !== '' ? $publicName : pathinfo($document->getClientOriginalName(), PATHINFO_FILENAME),
                 'original_name' => $document->getClientOriginalName(),
                 'stored_name' => basename($path),
                 'path' => $path,

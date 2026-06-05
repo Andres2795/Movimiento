@@ -127,6 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const row = document.createElement('li');
         const extension = file.name.split('.').pop() || 'file';
         const isExcel = ['xls', 'xlsx'].includes(extension.toLowerCase());
+        const baseName = file.name.replace(/\.[^.]+$/, '');
+        const escapedName = baseName.replace(/"/g, '&quot;');
 
         row.className = 'file-row';
         row.innerHTML = `
@@ -137,6 +139,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="progress-track">
                     <span class="progress-bar" style="--progress: 8%"></span>
                 </span>
+                ${removable ? `
+                    <label class="name-field inline-name-field">
+                        <span>Nombre público</span>
+                        <input type="text" name="document_names[${index}]" maxlength="150" value="${escapedName}" placeholder="Nombre para la página pública">
+                    </label>
+                ` : ''}
             </span>
             ${removable ? `
                 <button class="remove-button" type="button" data-remove-file="${index}" aria-label="Eliminar ${file.name}">

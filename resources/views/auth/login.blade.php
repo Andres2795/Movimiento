@@ -39,7 +39,7 @@
                         autocomplete="email"
                         required
                         autofocus
-                        placeholder="admin@camino-unidos.local"
+                        placeholder="ingrese su usuario"
                     >
                 </label>
 
@@ -57,10 +57,8 @@
 
                 <button class="save-button" type="submit">Entrar al sistema</button>
             </form>
-
-            <p class="login-help">
-                Usuario por defecto: {{ config('auth.default_admin.email') }}
-            </p>
+          <p></p>
+            
         </section>
     </main>
 @endsection

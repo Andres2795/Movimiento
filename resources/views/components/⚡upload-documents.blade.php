@@ -23,6 +23,10 @@ new class extends Component
 
     public bool $replaceExistingPadron = false;
 
+    public string $publicName = '';
+
+    public array $editingDocumentNames = [];
+
     public int $padronPage = 1;
 
     public int $padronPerPage = 10;
@@ -34,6 +38,7 @@ new class extends Component
         return [
             'documents' => ['required', 'array', 'min:1'],
             'documents.*' => ['file', 'mimes:xls,xlsx', 'max:20480'],
+            'publicName' => ['nullable', 'string', 'max:150'],
         ];
     }
 
@@ -44,6 +49,7 @@ new class extends Component
             'documents.*.mimes' => 'Solo se permiten archivos XLS o XLSX.',
             'documents.*.max' => 'Cada archivo debe pesar 20 MB o menos.',
             'documents.*.file' => 'Uno de los elementos seleccionados no es un archivo válido.',
+            'publicName.max' => 'El nombre público no debe superar 150 caracteres.',
         ];
     }
 
@@ -95,6 +101,7 @@ new class extends Component
 
                 $uploadedDocument = UploadedDocument::create([
                     'original_name' => $document->getClientOriginalName(),
+                    'public_name' => $this->publicDocumentName($document->getClientOriginalName()),
                     'stored_name' => basename($path),
                     'path' => $path,
                     'disk' => 'public',
@@ -107,7 +114,7 @@ new class extends Component
             }
         });
 
-        $this->reset('documents', 'queuedFiles');
+        $this->reset('documents', 'queuedFiles', 'publicName');
         $this->showUploadPanel = false;
         $this->padronPage = 1;
         $this->replaceExistingPadron = false;
@@ -132,7 +139,33 @@ new class extends Component
         $this->showUploadPanel = false;
         $this->reset('documents', 'queuedFiles');
         $this->replaceExistingPadron = false;
+        $this->publicName = '';
         $this->resetErrorBag();
+    }
+
+    public function saveDocumentName(int $documentId): void
+    {
+        $document = UploadedDocument::find($documentId);
+
+        if (! $document) {
+            return;
+        }
+
+        $name = trim((string) ($this->editingDocumentNames[$documentId] ?? $document->public_name ?? $document->original_name));
+
+        if ($name === '') {
+            $this->addError("editingDocumentNames.{$documentId}", 'Ingresa un nombre público para el documento.');
+            return;
+        }
+
+        if (mb_strlen($name) > 150) {
+            $this->addError("editingDocumentNames.{$documentId}", 'El nombre público no debe superar 150 caracteres.');
+            return;
+        }
+
+        $document->update(['public_name' => $name]);
+        $this->editingDocumentNames[$documentId] = $name;
+        $this->successMessage = 'Nombre del documento actualizado correctamente.';
     }
 
     public function previousPadronPage(): void
@@ -182,9 +215,20 @@ new class extends Component
     public function padronRowsForPage(int $page)
     {
         return $this->filteredPadronQuery()
-            ->orderBy('id')
             ->forPage($page, $this->padronPerPage)
             ->get();
+    }
+
+    public function padronDocuments()
+    {
+        return UploadedDocument::query()
+            ->latest('id')
+            ->get();
+    }
+
+    public function documentPublicName(UploadedDocument $document): string
+    {
+        return $document->public_name ?: pathinfo($document->original_name, PATHINFO_FILENAME);
     }
 
     private function importPadronRows(string $filePath, UploadedDocument $uploadedDocument): int
@@ -372,6 +416,13 @@ new class extends Component
         return trim((string) $value);
     }
 
+    private function publicDocumentName(string $originalName): string
+    {
+        $name = trim($this->publicName);
+
+        return $name !== '' ? $name : pathinfo($originalName, PATHINFO_FILENAME);
+    }
+
     private function normalizeHeader(string $value): string
     {
         $value = mb_strtolower(trim($value));
@@ -386,19 +437,19 @@ new class extends Component
         $query = PadronRecord::query();
         $search = trim($this->padronSearch);
 
-        if ($search === '') {
-            return $query;
+        if ($search !== '') {
+            $needle = '%'.mb_strtolower($search).'%';
+
+            $query->where(function ($query) use ($needle): void {
+                $query
+                    ->whereRaw('LOWER(numero) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(cedula) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(nombre) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(condicion) LIKE ?', [$needle]);
+            });
         }
 
-        $needle = '%'.mb_strtolower($search).'%';
-
-        return $query->where(function ($query) use ($needle): void {
-            $query
-                ->whereRaw('LOWER(numero) LIKE ?', [$needle])
-                ->orWhereRaw('LOWER(cedula) LIKE ?', [$needle])
-                ->orWhereRaw('LOWER(nombre) LIKE ?', [$needle])
-                ->orWhereRaw('LOWER(condicion) LIKE ?', [$needle]);
-        });
+        return $query->orderBy('id');
     }
 
     private function deleteCurrentPadronRecords(): void
@@ -429,7 +480,9 @@ new class extends Component
 
         <nav class="main-nav" aria-label="Navegación principal">
             <a href="{{ route('documents.upload') }}" @class(['is-active' => request()->routeIs('documents.upload')])>Padrón electoral</a>
-            <a href="{{ route('organic-structure') }}" @class(['is-active' => request()->routeIs('organic-structure')])>Estructura orgánica</a>
+            <a href="{{ route('organic-structure') }}" @class(['is-active' => request()->routeIs('organic-structure')])>Documento</a>
+            <a href="{{ route('public-page.settings') }}" @class(['is-active' => request()->routeIs('public-page.settings')])>Banner</a>
+            <a href="{{ route('join-requests') }}" @class(['is-active' => request()->routeIs('join-requests')])>Solicitudes</a>
         </nav>
 
         <span class="status-pill">
@@ -473,6 +526,17 @@ new class extends Component
                     </div>
 
                     <p class="upload-subtitle">El archivo debe ser XLS o XLSX y contener las columnas: No., CÉDULA, NOMBRE y CONDICIÓN.</p>
+
+                    <label class="name-field" for="padron-public-name">
+                        <span>Nombre público del documento</span>
+                        <input
+                            id="padron-public-name"
+                            type="text"
+                            wire:model.live.debounce.250ms="publicName"
+                            maxlength="150"
+                            placeholder="Ejemplo: Padrón electoral oficial 2026"
+                        >
+                    </label>
 
                     <label class="dropzone compact-dropzone" data-dropzone for="documents">
                         <span>
@@ -588,7 +652,48 @@ new class extends Component
             $padronTotalPages = max(1, (int) ceil($padronTotalRows / $padronPerPage));
             $currentPadronPage = min($padronPage, $padronTotalPages);
             $padronRows = $this->padronRowsForPage($currentPadronPage);
+            $padronDocuments = $this->padronDocuments();
         @endphp
+
+        <section class="data-card document-admin-card" aria-labelledby="padron-documents-title">
+            <div class="data-header">
+                <div>
+                    <p class="eyebrow">Documentos publicados</p>
+                    <h2 id="padron-documents-title">Padrón electoral público</h2>
+                </div>
+                <span class="files-count">{{ $padronDocuments->count() }}</span>
+            </div>
+
+            @if ($padronDocuments->isEmpty())
+                <p class="empty-state">Cuando importes un archivo de padrón, podrás editar aquí el nombre visible en la página pública.</p>
+            @else
+                <div class="document-admin-list">
+                    @foreach ($padronDocuments as $document)
+                        <div class="document-admin-row" wire:key="padron-document-name-{{ $document->id }}">
+                            <div class="file-meta">
+                                <span class="file-name">{{ $document->original_name }}</span>
+                                <span class="file-size">{{ $this->formatBytes($document->size) }} · {{ $document->created_at->format('d/m/Y') }}</span>
+                            </div>
+                            <label class="name-field compact-name-field">
+                                <span>Nombre público</span>
+                                <input
+                                    type="text"
+                                    wire:model.defer="editingDocumentNames.{{ $document->id }}"
+                                    value="{{ $this->documentPublicName($document) }}"
+                                    maxlength="150"
+                                >
+                            </label>
+                            <button class="secondary-button" type="button" wire:click="saveDocumentName({{ $document->id }})">
+                                Guardar nombre
+                            </button>
+                            @error("editingDocumentNames.{$document->id}")
+                                <span class="field-error">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </section>
 
         <section class="data-card" aria-labelledby="padron-table-title">
             <div class="data-header">
