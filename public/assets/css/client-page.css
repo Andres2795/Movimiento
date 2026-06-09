@@ -289,6 +289,21 @@ main {
     gap: 18px;
 }
 
+.gallery-pagination {
+    margin-top: 18px;
+}
+
+.gallery-pagination nav {
+    display: flex;
+    justify-content: center;
+}
+
+.gallery-pagination nav > div {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    box-shadow: 0 14px 34px rgba(22, 26, 60, 0.08);
+}
+
 .gallery-event-card {
     overflow: hidden;
     padding: 22px;

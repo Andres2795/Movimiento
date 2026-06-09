@@ -103,7 +103,7 @@
             <section id="galeria" class="gallery-section" aria-labelledby="gallery-title">
                 <div class="section-heading">
                     <p class="section-kicker">Galería</p>
-                    <h2 id="gallery-title">Eventos y fotografías del movimiento</h2>
+                    <h2 id="gallery-title">Galería fotográfica del movimiento</h2>
                     <p>Fotos organizadas por evento para revisar recorridos, reuniones y actividades públicas del movimiento.</p>
                 </div>
 
@@ -159,6 +159,12 @@
                                 </div>
                             </article>
                         @endforeach
+                    </div>
+                @endif
+
+                @if ($galleryEvents->hasPages())
+                    <div class="gallery-pagination">
+                        {{ $galleryEvents->links() }}
                     </div>
                 @endif
             </section>

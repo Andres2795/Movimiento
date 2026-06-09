@@ -30,7 +30,8 @@ class ClientPageController extends Controller
             ->whereHas('photos')
             ->orderByDesc('event_date')
             ->orderByDesc('id')
-            ->get();
+            ->paginate(2, ['*'], 'galeria')
+            ->withQueryString();
 
         return view('client.home', [
             'heroImageUrl' => $publicPageSetting->hero_image_path

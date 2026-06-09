@@ -126,6 +126,47 @@ class ExampleTest extends TestCase
         $response->assertSee('storage/gallery/events/'.$event->id.'/recorrido-1.jpg');
     }
 
+    public function test_public_home_page_paginates_gallery_events(): void
+    {
+        Storage::fake('public');
+
+        foreach ([
+            ['title' => 'Evento A', 'date' => '2026-06-01', 'photo' => 'a.jpg'],
+            ['title' => 'Evento B', 'date' => '2026-06-02', 'photo' => 'b.jpg'],
+            ['title' => 'Evento C', 'date' => '2026-06-03', 'photo' => 'c.jpg'],
+        ] as $data) {
+            $event = GalleryEvent::create([
+                'title' => $data['title'],
+                'description' => null,
+                'event_date' => $data['date'],
+            ]);
+
+            $photo = GalleryPhoto::create([
+                'gallery_event_id' => $event->id,
+                'original_name' => $data['photo'],
+                'stored_name' => $data['photo'],
+                'path' => 'gallery/events/'.$event->id.'/'.$data['photo'],
+                'disk' => 'public',
+                'mime_type' => 'image/jpeg',
+                'size' => 2048,
+                'sort_order' => 1,
+            ]);
+
+            Storage::disk('public')->put($photo->path, 'image-content');
+        }
+
+        $response = $this->get(route('client.home'));
+        $response->assertStatus(200);
+        $response->assertSee('Evento C');
+        $response->assertSee('Evento B');
+        $response->assertDontSee('Evento A');
+
+        $responsePage2 = $this->get(route('client.home', ['galeria' => 2]));
+        $responsePage2->assertStatus(200);
+        $responsePage2->assertSee('Evento A');
+        $responsePage2->assertDontSee('Evento C');
+    }
+
     public function test_public_join_form_stores_movement_request(): void
     {
         $response = $this->post(route('movement.join.store'), [
