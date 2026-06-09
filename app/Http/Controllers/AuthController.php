@@ -32,9 +32,19 @@ class AuthController extends Controller
         if (! Auth::attempt([
             'email' => $credentials['email'],
             'password' => $credentials['password'],
-            'role' => 'administrador',
-            'is_active' => true,
         ])) {
+            RateLimiter::hit($this->throttleKey($request), 60);
+
+            return back()
+                ->withErrors(['email' => 'Las credenciales no coinciden o el usuario no tiene permisos de administrador.'])
+                ->onlyInput('email');
+        }
+
+        $user = $request->user();
+
+        if (! $user || $user->role !== 'administrador' || ! $user->is_active) {
+            Auth::logout();
+
             RateLimiter::hit($this->throttleKey($request), 60);
 
             return back()
@@ -45,7 +55,7 @@ class AuthController extends Controller
         RateLimiter::clear($this->throttleKey($request));
         $request->session()->regenerate();
 
-        $request->user()->forceFill([
+        $user->forceFill([
             'last_login_at' => now(),
         ])->save();
 
