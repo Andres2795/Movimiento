@@ -193,7 +193,7 @@
                                     </svg>
                                 </div>
                                 <div>
-                                    <span class="document-badge">{{ $document['type'] }}</span>
+                                    <span class="document-badge">{{ $document['name'] }}</span>
                                     <h3>{{ $document['name'] }}</h3>
                                     <p>Fecha publicación:  {{ $document['date']->format('d/m/Y') }}</p>
                                 </div>
