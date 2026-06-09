@@ -195,7 +195,7 @@
                                 <div>
                                     <span class="document-badge">{{ $document['name'] }}</span>
                                     <h3>{{ $document['name'] }}</h3>
-                                    <p>Fecha publicación:  {{ $document['date']->format('d/m/Y') }}</p>
+                                    <!-- <p>Fecha publicación:  {{ $document['date']->format('d/m/Y') }}</p> -->
                                 </div>
                                 <a href="{{ $document['url'] }}" target="_blank" rel="noopener">
                                     {{ $document['button'] }}
