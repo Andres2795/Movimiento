@@ -205,7 +205,6 @@
                     </div>
                 @endif
             </section>
-
             <section id="contacto" class="contact-section" aria-labelledby="contact-title">
                 <div class="contact-copy">
                     <p class="section-kicker">Contacto</p>
