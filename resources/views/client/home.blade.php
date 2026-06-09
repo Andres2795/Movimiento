@@ -195,7 +195,7 @@
                                 <div>
                                     <span class="document-badge">{{ $document['type'] }}</span>
                                     <h3>{{ $document['name'] }}</h3>
-                                    <p>{{ number_format($document['size'] / 1048576, 1) }} MB · {{ $document['date']->format('d/m/Y') }}</p>
+                                    <p>Fecha publicación:  {{ $document['date']->format('d/m/Y') }}</p>
                                 </div>
                                 <a href="{{ $document['url'] }}" target="_blank" rel="noopener">
                                     {{ $document['button'] }}
