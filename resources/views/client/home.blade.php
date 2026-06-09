@@ -172,7 +172,7 @@
             <section id="transparencia" class="transparency-section" aria-labelledby="transparency-title">
                 <div class="section-heading">
                     <p class="section-kicker">Transparencia</p>
-                    <h2 id="transparency-title">Documentos públicos del movimiento</h2>
+                    <h2 id="transparency-title">Documentos del movimiento</h2>
                     <p>Consulta los documentos subidos desde el panel administrativo: estructura orgánica y padrón electoral.</p>
                 </div>
 
